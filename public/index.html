@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Study Group Finder | Academic Collaboration Platform</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --secondary: #ec4899;
+    --accent: #10b981;
+    --warning: #f59e0b;
+    --bg: #f8fafc;
+    --sidebar: #ffffff;
+    --card: #ffffff;
+    --text-dark: #0f172a;
+    --text-light: #64728b;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  }
+  * { box-sizing: border-box; margin:0; padding:0; font-family:'Inter', system-ui, sans-serif; }
+  body { background-color: var(--bg); color: var(--text-dark); overflow: hidden; }
+  .app-container { display:grid; grid-template-columns:260px 1fr; height:100vh; }
+  aside { background: var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px; }
+  .brand { display:flex; align-items:center; gap:12px; font-size:1.4rem; font-weight:800; color:var(--primary); margin-bottom:40px; }
+  .nav-menu { list-style:none; flex-grow:1; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; cursor:pointer; margin-bottom:8px; color:var(--text-light); font-weight:500; transition:all 0.2s; }
+  .nav-item:hover { background:#f1f5f9; color:var(--primary); }
+  .nav-item.active { background:var(--primary); color:white; }
+  .sidebar-section { margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+  .sidebar-section h5 { font-size:0.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; }
+  .mini-course-list { display:flex; flex-direction:column; gap:8px; }
+  .mini-course-tag { font-size:0.85rem; padding:6px 10px; background:#f1f5f9; border-radius:6px; color:var(--text-dark); display:flex; justify-content:space-between; align-items:center; }
+  .remove-course { cursor:pointer; color:#ef4444; font-weight:bold; font-size:1rem; }
+  main { padding:32px; overflow-y:auto; position:relative; }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; }
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-bottom:32px; }
+  .stat-card { background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border); }
+  .stat-card h4 { color:var(--text-light); font-size:0.8rem; text-transform:uppercase; margin-bottom:8px; }
+  .stat-card p { font-size:1.5rem; font-weight:700; }
+  .course-ribbon { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+  .course-chip { padding:8px 16px; background:white; border:1px solid var(--border); border-radius:20px; font-size:0.9rem; font-weight:500; cursor:pointer; transition:all 0.2s; }
+  .course-chip.active { background:var(--primary); color:white; border-color:var(--primary); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:24px; }
+  .group-card { background:white; border-radius:16px; padding:24px; border:1px solid var(--border); transition:transform 0.2s, box-shadow 0.2s; display:flex; flex-direction:column; }
+  .group-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-md); }
+  .tag { font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:6px; background:#eef2ff; color:var(--primary); text-transform:uppercase; width:fit-content; margin-bottom:12px; }
+  .group-footer { display:flex; justify-content:space-between; align-items:center; padding-top:16px; border-top:1px solid var(--border); }
+  .avatar-sm { width:28px; height:28px; border-radius:50%; background:#cbd5e1; border:2px solid white; margin-left:-8px; }
+  .avatar-sm:first-child { margin-left:0; }
+  .btn { padding:10px 20px; border-radius:8px; border:none; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+  .btn:active { transform:scale(0.98); }
+  .btn-primary { background:var(--primary); color:white; }
+  .btn-ghost { background:transparent; color:var(--text-light); border:1px solid var(--border); }
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); display:none; justify-content:center; align-items:center; z-index:100; }
+  .panel { background:white; width:90%; max-width:500px; border-radius:20px; padding:32px; }
+  .chat-container { height:400px; display:flex; flex-direction:column; background:#f8fafc; border-radius:12px; margin-top:20px; }
+  .chat-messages { flex-grow:1; padding:15px; overflow-y:auto; }
+  .msg { margin-bottom:10px; max-width:80%; padding:8px 12px; border-radius:12px; font-size:0.9rem; }
+  .msg.received { background:#fff; align-self:flex-start; box-shadow:var(--shadow-sm); }
+  .msg.sent { background:var(--primary); color:white; align-self:flex-end; }
+  #auth-screen { position:fixed; inset:0; background:var(--primary); display:flex; justify-content:center; align-items:center; z-index:1000; color:white; text-align:center; }
+  .hidden { display:none !important; }
+  input, select, textarea { width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; outline:none; }
+</style>
+</head>
+<body>
+
+<!-- Registration Screen -->
+<div id="auth-screen">
+  <div style="max-width:400px;">
+    <h1 style="font-size:3rem; margin-bottom:10px;">Simple Study Group Finder Web App</h1>
+    <p style="opacity:0.8; margin-bottom:30px;">Your academic journey is better together.</p>
+    <div style="background:white; padding:30px; border-radius:20px; color:var(--text-dark);">
+      <input type="text" id="user-name-input" placeholder="Your Full Name" style="margin-bottom:15px;">
+      <input type="text" id="user-uni-input" placeholder="Your University" style="margin-bottom:20px;">
+      <button class="btn btn-primary" style="width:100%;" onclick="app.login()">Enter Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-container">
+  <!-- Sidebar -->
+  <aside>
+    <div class="brand">Simple Study Group Finder Web App</div>
+    <ul class="nav-menu">
+      <li class="nav-item active" data-tab="discover" onclick="app.switchTab('discover')"><span>🔍</span> Discover</li>
+      <li class="nav-item" data-tab="my-groups" onclick="app.switchTab('my-groups')"><span>🎓</span> My Groups</li>
+      <li class="nav-item" data-tab="messages" onclick="app.switchTab('messages')"><span>💬</span> Chats</li>
+    </ul>
+    <div class="sidebar-section">
+      <h5>My Enrolled Courses</h5>
+      <div id="sidebar-course-list" class="mini-course-list"></div>
+    </div>
+    <div class="user-info" style="margin-top:auto; padding-top:20px; border-top:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div id="user-initials" style="width:40px; height:40px; background:var(--primary); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">?</div>
+        <div>
+          <p id="user-display-name" style="font-size:0.9rem; font-weight:700;">Loading...</p>
+          <p id="user-display-uni" style="font-size:0.75rem; color:var(--text-light);">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main>
+    <header>
+      <div>
+        <h1 id="tab-title">Discover Groups</h1>
+        <p id="tab-subtitle" style="color: var(--text-light);">Find study partners matching your courses.</p>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-ghost" onclick="app.showModal('add-course-modal')">Track New Course</button>
+        <button class="btn btn-primary" onclick="app.showModal('create-group-modal')">+ Start Group</button>
+      </div>
+    </header>
+
+    <div id="stats-view" class="stats-row">
+      <div class="stat-card"><h4>Marketplace</h4><p id="stat-active">0</p></div>
+      <div class="stat-card"><h4>Enrolled</h4><p id="stat-courses">0</p></div>
+      <div class="stat-card"><h4>Pending</h4><p id="stat-req">0</p></div>
+      <div class="stat-card"><h4>Joined</h4><p id="stat-joined">0</p></div>
+    </div>
+
+    <!-- Discover Tab -->
+    <div id="tab-discover" class="tab-content">
+      <div class="course-ribbon" id="course-ribbon">
+        <div class="course-chip active" onclick="app.filterByCourse('all')">All Groups</div>
+      </div>
+      <div class="section-header">
+        <h3>Explore Groups</h3>
+        <input type="text" placeholder="Search by name..." id="search-input" oninput="app.filterGroups()" style="width:250px;">
+      </div>
+      <div class="grid" id="discover-grid"></div>
+    </div>
+
+    <!-- My Groups Tab -->
+    <div id="tab-my-groups" class="tab-content hidden">
+      <h3>My Active Collaborations</h3>
+      <div class="grid" id="my-groups-grid" style="margin-top:20px;"></div>
+    </div>
+
+    <!-- Messages Tab -->
+    <div id="tab-messages" class="tab-content hidden">
+      <div style="background:white; border-radius:20px; padding:30px; border:1px solid var(--border);">
+        <h3>Group Chat</h3>
+        <div class="chat-container">
+          <div class="chat-messages" id="chat-msgs">
+            <div class="msg received">Welcome to your workspace! Once you join groups, their chats will appear here.</div>
+          </div>
+          <div style="display:flex; padding:10px; gap:10px; background:white; border-top:1px solid var(--border);">
+            <input type="text" id="chat-input-field" placeholder="Type a message...">
+            <button class="btn btn-primary" onclick="app.sendMessage()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modals -->
+<div id="overlay" class="overlay" onclick="app.handleOverlayClick(event)">
+  <div id="create-group-modal" class="panel hidden">
+    <h2>Start Study Group</h2>
+    <div style="margin-top:20px; display:flex; flex-direction:column; gap:15px;">
+      <input type="text" id="g-name" placeholder="Group Name">
+      <input type="text" id="g-course" placeholder="Course Code (e.g. CS101)">
+      <textarea id="g-desc" placeholder="Goals and schedule..."></textarea>
+      <button class="btn btn-primary" onclick="app.createGroup()">Publish</button>
+    </div>
+  </div>
+
+  <div id="add-course-modal" class="panel hidden">
+    <h2>Add Academic Course</h2>
+    <p style="margin-bottom:20px; color:var(--text-light);">Tracking a course lets you find relevant groups easily.</p>
+    <input type="text" id="c-code" placeholder="Enter Course Code (e.g. BIO202)" style="margin-bottom:20px;">
+    <button class="btn btn-primary" style="width:100%;" onclick="app.addCourse()">Add to My Profile</button>
+  </div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:3000';
+const app = {
+  user: { id:null, name:"", uni:"", courses:[], joinedGroups:[], requests:[] },
+  currentFilter:'all', data:{ groups:[] },
+
+  login(){
+    const name = document.getElementById('user-name-input').value.trim();
+    const uni = document.getElementById('user-uni-input').value.trim();
+    if(!name||!uni) return;
+    fetch(`${API_BASE}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name, uni }) })
+      .then(r=>r.json()).then(user=>{
+        this.user=user;
+        document.getElementById('user-display-name').innerText=user.name;
+        document.getElementById('user-display-uni').innerText=user.uni;
+        document.getElementById('user-initials').innerText=user.name.split(' ').map(n=>n[0]).join('').toUpperCase();
+        document.getElementById('auth-screen').classList.add('hidden');
+        this.fetchGroups();
+        this.renderAll();
+      });
+  },
+
+  fetchGroups(){
+    fetch(`${API_BASE}/groups`).then(r=>r.json()).then(groups=>{
+      this.data.groups=groups;
+      this.renderAll();
+    });
+  },
+
+  addCourse(){
+    const code = document.getElementById('c-code').value.trim().toUpperCase();
+    if(!code) return;
+    fetch(`${API_BASE}/course`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ userId:this.user.id, course:code }) })
+      .then(r=>r.json()).then(courses=>{
+        this.user.courses=courses;
+        this.updateCourseUI();
+        this.updateStats();
+      });
+    document.getElementById('c-code').value='';
+    this.closeModals();
+  },
+
+  createGroup(){
+    const name=document.getElementById('g-name').value.trim();
+    const course=document.getElementById('g-course').value.trim().toUpperCase();
+    const desc=document.getElementById('g-desc').value.trim();
+    if(!name||!course) return;
+    fetch(`${API_BASE}/groups`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name, course, desc, userId:this.user.id }) })
+      .then(r=>r.json()).then(group=>{
+        this.data.groups.unshift(group);
+        if(!this.user.courses.includes(course)) this.user.courses.push(course);
+        this.renderAll();
+        this.closeModals();
+        document.getElementById('g-name').value='';
+        document.getElementById('g-course').value='';
+        document.getElementById('g-desc').value='';
+      });
+  },
+
+  joinGroup(id){
+    if(this.user.requests.includes(id) || this.user.joinedGroups.includes(id)) return;
+
+    // Optimistic UI
+    this.user.requests.push(id);
+    this.updateStats();
+    this.renderDiscover();
+
+    fetch(`${API_BASE}/groups/join`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userId:this.user.id, groupId:id })
+    })
+    .then(r => r.json())
+    .then(updatedUser => {
+        // Wait 1 second for server simulated approval
+        setTimeout(()=>{
+          this.user = updatedUser;
+          this.data.groups.forEach(g=>{
+            if(this.user.joinedGroups.includes(g.id)) g.members = g.members + 1;
+            this.user.requests = this.user.requests.filter(rid => !this.user.joinedGroups.includes(rid));
+          });
+          this.renderAll();
+        }, 1000);
+    });
+  },
+
+  updateCourseUI(){
+    const sidebar=document.getElementById('sidebar-course-list'); sidebar.innerHTML='';
+    if(this.user.courses.length===0) sidebar.innerHTML='<p style="font-size:0.75rem;color:#94a3b8 italic;">No courses tracked.</p>';
+    this.user.courses.forEach(c=>{
+      const div=document.createElement('div'); div.className='mini-course-tag';
+      div.innerHTML=`<span>${c}</span> <span class="remove-course" onclick="app.removeCourse('${c}')">&times;</span>`;
+      sidebar.appendChild(div);
+    });
+    const ribbon=document.getElementById('course-ribbon'); ribbon.innerHTML=`<div class="course-chip ${this.currentFilter==='all'?'active':''}" onclick="app.filterByCourse('all')">All Groups</div>`;
+    this.user.courses.forEach(c=>{
+      const chip=document.createElement('div'); chip.className=`course-chip ${this.currentFilter===c?'active':''}`; chip.innerText=c; chip.onclick=()=>this.filterByCourse(c); ribbon.appendChild(chip);
+    });
+  },
+
+  filterByCourse(code){ 
+    this.currentFilter = code; 
+    this.updateCourseUI(); 
+    this.renderDiscover(); 
+  },
+
+  renderDiscover(){
+    const grid = document.getElementById('discover-grid');
+    grid.innerHTML='';
+    let filtered = this.data.groups;
+    if(this.currentFilter!=='all') filtered=filtered.filter(g=>g.course===this.currentFilter);
+    if(filtered.length===0){
+      grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-light)">No groups found for "${this.currentFilter}". Why not start one?</div>`;
+      return;
+    }
+    filtered.forEach(g=>{
+      const card=document.createElement('div'); card.className='group-card';
+      const isJoined = this.user.joinedGroups.includes(g.id);
+      const isReq = this.user.requests.includes(g.id);
+      card.innerHTML=`
+        <span class="tag">${g.course}</span>
+        <h3>${g.name}</h3>
+        <p style="margin-bottom:20px;font-size:0.9rem;color:var(--text-light)">${g.desc}</p>
+        <div class="group-footer">
+          <div style="display:flex">${Array(Math.min(g.members,3)).fill(0).map(()=>'<div class="avatar-sm"></div>').join('')}</div>
+          <button class="btn ${isJoined?'btn-ghost':'btn-primary'}" ${isJoined||isReq?'disabled':''}>
+            ${isJoined?'Joined':(isReq?'Pending':'Join')}
+          </button>
+        </div>
+      `;
+      if(!isJoined && !isReq){
+        card.querySelector('button').addEventListener('click', ()=>this.joinGroup(g.id));
+      }
+      grid.appendChild(card);
+    });
+  },
+
+  renderMyGroups(){
+    const grid=document.getElementById('my-groups-grid'); grid.innerHTML='';
+    const joined=this.data.groups.filter(g=>this.user.joinedGroups.includes(g.id));
+    joined.forEach(g=>{
+      const card=document.createElement('div'); card.className='group-card';
+      card.style.borderLeft='4px solid var(--accent)';
+      card.innerHTML=`<h3>${g.name}</h3><p>${g.course}</p><button class="btn btn-ghost" style="margin-top:15px" onclick="app.switchTab('messages')">Chat Now</button>`;
+      grid.appendChild(card);
+    });
+  },
+
+  removeCourse(code){
+    fetch(`${API_BASE}/course/remove`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ userId:this.user.id, course:code }) })
+      .then(r=>r.json()).then(courses=>{
+        this.user.courses=courses;
+        if(this.currentFilter===code) this.filterByCourse('all');
+        this.updateCourseUI(); this.updateStats();
+      });
+  },
+
+  updateStats(){
+    document.getElementById('stat-active').innerText=this.data.groups.length;
+    document.getElementById('stat-courses').innerText=this.user.courses.length;
+    document.getElementById('stat-req').innerText=this.user.requests.length;
+    document.getElementById('stat-joined').innerText=this.user.joinedGroups.length;
+  },
+
+  renderAll(){ this.updateCourseUI(); this.renderDiscover(); this.renderMyGroups(); this.updateStats(); },
+
+  switchTab(tabId){
+    document.querySelectorAll('.nav-item').forEach(i=>i.classList.toggle('active',i.getAttribute('data-tab')===tabId));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
+    document.getElementById('tab-'+tabId).classList.remove('hidden');
+    document.getElementById('stats-view').classList.toggle('hidden',tabId!=='discover');
+  },
+
+  showModal(id){ document.getElementById('overlay').style.display='flex'; document.getElementById(id).classList.remove('hidden'); },
+  closeModals(){ document.getElementById('overlay').style.display='none'; document.querySelectorAll('.panel').forEach(p=>p.classList.add('hidden')); },
+  handleOverlayClick(e){ if(e.target.id==='overlay') this.closeModals(); },
+
+  sendMessage(){
+    const inp=document.getElementById('chat-input-field'); if(!inp.value) return;
+    const m=document.createElement('div'); m.className='msg sent'; m.innerText=inp.value;
+    document.getElementById('chat-msgs').appendChild(m); inp.value='';
+    const container=document.getElementById('chat-msgs'); container.scrollTop=container.scrollHeight;
+  }
+};
+</script>
+
+</body>
+</html>
+
